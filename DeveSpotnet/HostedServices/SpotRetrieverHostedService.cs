@@ -43,10 +43,16 @@ namespace DeveSpotnet.HostedServices
                     var dbContext = scope.ServiceProvider.GetRequiredService<DeveSpotnetDbContext>();
 
                     // Process a batch of headers.
-                    await ProcessBatchAsync(client, dbContext, stoppingToken);
+                    var itemsProcessed = await ProcessBatchAsync(client, dbContext, stoppingToken);
 
-                    // Wait before processing the next batch.
-                    //await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+                    if (itemsProcessed == 0)
+                    {
+                        _logger.LogInformation("No new headers were found, waiting before checking again.");
+
+                        // No new headers were found, wait before checking again.
+                        await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+                        break;
+                    }
                 }
             }
             catch (Exception ex)
@@ -93,14 +99,13 @@ namespace DeveSpotnet.HostedServices
         /// <summary>
         /// Retrieves and processes a batch of article headers.
         /// </summary>
-        private async Task ProcessBatchAsync(NntpClient client, DeveSpotnetDbContext dbContext, CancellationToken token)
+        private async Task<int> ProcessBatchAsync(NntpClient client, DeveSpotnetDbContext dbContext, CancellationToken token)
         {
             // Retrieve the group details.
             var groupResponse = await client.GetGroupAsync(UsenetConstants.HdrGroup);
             if (!groupResponse.IsSuccessfullyComplete)
             {
-                _logger.LogError("Failed to select group {Group}", UsenetConstants.HdrGroup);
-                return;
+                throw new Exception($"Failed to select group {UsenetConstants.HdrGroup}.");
             }
 
             int groupLow = groupResponse.LowWatermark;
@@ -114,7 +119,7 @@ namespace DeveSpotnet.HostedServices
             {
                 _logger.LogInformation("No new articles available. Current stored article: {Article}, group high watermark: {High}",
                     startArticle, groupHigh);
-                return;
+                return 0;
             }
 
             // Determine the end article for this batch.
@@ -126,7 +131,7 @@ namespace DeveSpotnet.HostedServices
             if (xoverResponse == null || xoverResponse.Count == 0)
             {
                 _logger.LogInformation("No headers found in range {StartArticle} to {EndArticle}.", startArticle, endArticle);
-                return;
+                return 0;
             }
 
             // Map NNTP headers to database entities.
@@ -153,6 +158,7 @@ namespace DeveSpotnet.HostedServices
             dbContext.SpotHeaders.AddRange(headersToAdd);
             await dbContext.SaveChangesAsync(token);
             _logger.LogInformation("Saved {Count} headers to the database.", headersToAdd.Count);
+            return headersToAdd.Count;
         }
     }
 }
