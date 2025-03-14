@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DeveSpotnet.Migrations.Sqlite.Migrations
 {
     [DbContext(typeof(DeveSpotnetDbContext))]
-    [Migration("20250314162755_Initial")]
+    [Migration("20250314163717_Initial")]
     partial class Initial
     {
         /// <inheritdoc />

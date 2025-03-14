@@ -26,8 +26,8 @@ namespace DeveSpotnet.Db.DbModels
 
         public int Lines { get; set; }
 
-        public int Code { get; private set; }
+        public int Code { get; set; }
 
-        public string? Message { get; private set; }
+        public string? Message { get; set; }
     }
 }

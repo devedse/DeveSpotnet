@@ -1,6 +1,7 @@
 
 using DeveSpotnet.Configuration;
 using DeveSpotnet.Db;
+using DeveSpotnet.HostedServices;
 using DeveSpotnet.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,6 +32,8 @@ namespace DeveSpotnet
             builder.Services.AddOpenApi();
 
             builder.Services.AddSwaggerGen();
+
+            builder.Services.AddHostedService<SpotRetrieverHostedService>();
 
             builder.Services.AddDbContext<DeveSpotnetDbContext>(options =>
             {

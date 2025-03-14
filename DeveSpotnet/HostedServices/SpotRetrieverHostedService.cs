@@ -46,7 +46,7 @@ namespace DeveSpotnet.HostedServices
                     await ProcessBatchAsync(client, dbContext, stoppingToken);
 
                     // Wait before processing the next batch.
-                    await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+                    //await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
                 }
             }
             catch (Exception ex)
@@ -107,8 +107,7 @@ namespace DeveSpotnet.HostedServices
             int groupHigh = groupResponse.HighWatermark;
 
             // Determine the starting article number based on what is already stored.
-            int lastStoredArticle = await dbContext.SpotHeaders
-                .MaxAsync(h => (int?)h.ArticleNumber, token) ?? 0;
+            int lastStoredArticle = await dbContext.SpotHeaders.MaxAsync(h => (int?)h.ArticleNumber, token) ?? 0;
             int startArticle = lastStoredArticle > 0 ? lastStoredArticle + 1 : groupLow;
 
             if (startArticle > groupHigh)
@@ -143,7 +142,9 @@ namespace DeveSpotnet.HostedServices
                     MessageID = header.MessageID,
                     References = header.References,
                     Bytes = header.Bytes,
-                    Lines = header.Lines
+                    Lines = header.Lines,
+                    Code = header.Code,
+                    Message = header.Message
                 };
                 headersToAdd.Add(dbHeader);
             }
