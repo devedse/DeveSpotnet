@@ -1,4 +1,7 @@
 
+using DeveSpotnet.Configuration;
+using DeveSpotnet.Services;
+
 namespace DeveSpotnet
 {
     public class Program
@@ -7,7 +10,12 @@ namespace DeveSpotnet
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            // Bind the "UsenetSettings" section from configuration (including User Secrets) to the UsenetSettings POCO.
+            builder.Services.Configure<UsenetSettings>(builder.Configuration.GetSection("UsenetSettings"));
+
             // Add services to the container.
+            // Register the Usenet service as a singleton.
+            builder.Services.AddSingleton<IUsenetService, UsenetService>();
 
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
