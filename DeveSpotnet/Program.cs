@@ -1,14 +1,23 @@
 
 using DeveSpotnet.Configuration;
+using DeveSpotnet.Db;
 using DeveSpotnet.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace DeveSpotnet
 {
+    public record DatabaseProvider(string Name, string Assembly);
+
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
+            var sqliteProvider = new DatabaseProvider("Sqlite", typeof(Migrations.Sqlite.Marker).Assembly.GetName().Name!);
+            var postgresProvider = new DatabaseProvider("Postgres", typeof(Migrations.Postgres.Marker).Assembly.GetName().Name!);
+
             var builder = WebApplication.CreateBuilder(args);
+
+            var configuration = builder.Configuration;
 
             // Bind the "UsenetSettings" section from configuration (including User Secrets) to the UsenetSettings POCO.
             builder.Services.Configure<UsenetSettings>(builder.Configuration.GetSection("UsenetSettings"));
@@ -23,8 +32,33 @@ namespace DeveSpotnet
 
             builder.Services.AddSwaggerGen();
 
+            builder.Services.AddDbContext<DeveSpotnetDbContext>(options =>
+            {
+                var databaseProvider = configuration.GetValue<string>("DatabaseProvider");
+
+                if (databaseProvider == sqliteProvider.Name)
+                {
+                    options.UseSqlite(configuration.GetConnectionString("Sqlite"), x => x.MigrationsAssembly(sqliteProvider.Assembly));
+                }
+                else if (databaseProvider == postgresProvider.Name)
+                {
+                    options.UseNpgsql(configuration.GetConnectionString("Postgres"), x => x.MigrationsAssembly(postgresProvider.Assembly));
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Unknown database provider: {databaseProvider}");
+                }
+            });
+
 
             var app = builder.Build();
+
+            // initialize database
+            using (var scope = app.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<DeveSpotnetDbContext>();
+                await db.Database.MigrateAsync();
+            }
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())

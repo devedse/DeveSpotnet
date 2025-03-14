@@ -15,4 +15,10 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.3.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DeveSpotnet.Db\DeveSpotnet.Db.csproj" />
+    <ProjectReference Include="..\Migrations\DeveSpotnet.Migrations.Postgres\DeveSpotnet.Migrations.Postgres.csproj" />
+    <ProjectReference Include="..\Migrations\DeveSpotnet.Migrations.Sqlite\DeveSpotnet.Migrations.Sqlite.csproj" />
+  </ItemGroup>
+
 </Project>
