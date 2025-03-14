@@ -29,5 +29,8 @@ namespace DeveSpotnet.Db.DbModels
         public int Code { get; set; }
 
         public string? Message { get; set; }
+
+        //public int? Metadata_Season { get; set; }
+        //public int? Metadata_Episode { get; set; }
     }
 }

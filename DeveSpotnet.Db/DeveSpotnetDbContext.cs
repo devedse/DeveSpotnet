@@ -10,5 +10,9 @@ namespace DeveSpotnet.Db
         public DeveSpotnetDbContext(DbContextOptions<DeveSpotnetDbContext> options) : base(options)
         {
         }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+        }
     }
 }

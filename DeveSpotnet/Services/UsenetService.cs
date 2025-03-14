@@ -7,6 +7,7 @@ using System.Text;
 using DeveSpotnet.SpotnetHelpers;
 using System.Reflection.PortableExecutable;
 using mcnntp.common.client;
+using mcnntp.common;
 
 namespace DeveSpotnet.Services
 {
@@ -53,24 +54,46 @@ namespace DeveSpotnet.Services
                 throw new Exception($"Failed to select group {UsenetConstants.HdrGroup}.");
             }
 
-            int lastArticle = groupResponse.HighWatermark;
-            int firstArticle = Math.Max(groupResponse.LowWatermark, lastArticle - 99); // Get the last 100 articles
 
-            _logger.LogInformation("Retrieving last 100 spots from {Group}, articles {First}-{Last}", UsenetConstants.HdrGroup, firstArticle, lastArticle);
-
+            var messageId = "<Yd96rJhZDR0pIPJZwQyxI@spot.net>";
+            var articleNumber = 4234898;
 
 
-            var xoverResponse = await client.XOverAsync(firstArticle, lastArticle);
+            var xoverFor4234898 = await client.XOverAsync(articleNumber, articleNumber);
+            var roeroms06e05xover = xoverFor4234898.First();
+
+            var head = await client.HeadAsync(messageId);
+
+            var article2 = await client.ArticleAsync(messageId);
 
 
-            foreach (var header in xoverResponse)
-            {
-                Console.WriteLine(header.Subject);
+            var parsedFrom = SuperSpotnetHelper.ParseHeader(roeroms06e05xover.Subject, roeroms06e05xover.From, roeroms06e05xover.Date, roeroms06e05xover.MessageID);
 
-                var article = await client.ArticleAsync(header.ArticleNumber);
-                var article2 = await client.ArticleAsync(header.MessageID);
 
-            }
+
+            //SuperSpotnetHelper.ParseHeader("", headers.from)
+
+
+            Console.WriteLine(article2.Message);
+
+            //int lastArticle = groupResponse.HighWatermark;
+            //int firstArticle = Math.Max(groupResponse.LowWatermark, lastArticle - 99); // Get the last 100 articles
+
+            //_logger.LogInformation("Retrieving last 100 spots from {Group}, articles {First}-{Last}", UsenetConstants.HdrGroup, firstArticle, lastArticle);
+
+
+
+            //var xoverResponse = await client.XOverAsync(firstArticle, lastArticle);
+
+
+            //foreach (var header in xoverResponse)
+            //{
+            //    Console.WriteLine(header.Subject);
+
+            //    var article = await client.ArticleAsync(header.ArticleNumber);
+            //    var article2 = await client.ArticleAsync(header.MessageID);
+
+            //}
 
 
 
