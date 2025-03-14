@@ -5,7 +5,7 @@ namespace DeveSpotnet.Db
 {
     public class DeveSpotnetDbContext : DbContext
     {
-        public DbSet<DbSpot> Spots => Set<DbSpot>();
+        public DbSet<DbSpotHeader> SpotHeaders => Set<DbSpotHeader>();
 
         public DeveSpotnetDbContext(DbContextOptions<DeveSpotnetDbContext> options) : base(options)
         {
