@@ -1,6 +1,8 @@
-﻿namespace DeveSpotnet.SpotnetHelpers
+﻿using DeveSpotnet.SpotnetHelpers;
+
+namespace DeveSpotnet.Models
 {
-    public class DbSpot
+    public class ParsedHeader
     {
         public string Header { get; set; }
         public string SelfSignedPubKey { get; set; }
@@ -33,17 +35,5 @@
         /// Optional XML signature (if provided by the client).
         /// </summary>
         public string XmlSignature { get; set; }
-    }
-
-    public class RsaKey
-    {
-        /// <summary>
-        /// Base64 encoded RSA modulus.
-        /// </summary>
-        public string Modulo { get; set; }
-        /// <summary>
-        /// Base64 encoded RSA exponent.
-        /// </summary>
-        public string Exponent { get; set; }
     }
 }

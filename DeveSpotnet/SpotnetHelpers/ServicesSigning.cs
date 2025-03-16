@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using DeveSpotnet.Models;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -48,7 +49,7 @@ namespace DeveSpotnet.SpotnetHelpers
         /// <param name="signature">The header signature (base64 encoded).</param>
         /// <param name="rsaKeys">A dictionary of RSA keys indexed by keyid.</param>
         /// <returns>True if the signature is valid; otherwise, false.</returns>
-        public static bool VerifySpotHeader(DbSpot spot, string signature, Dictionary<int, RsaKey> rsaKeys)
+        public static bool VerifySpotHeader(ParsedHeader spot, string signature, Dictionary<int, RsaKey> rsaKeys)
         {
             // Construct the string to verify:
             // PHP: $toCheck = $spot['title'] . substr($spot['header'], 0, strlen($spot['header']) - strlen($spot['headersign']) - 1) . $spot['poster'];
@@ -70,7 +71,7 @@ namespace DeveSpotnet.SpotnetHelpers
         /// </summary>
         /// <param name="spot">The DbSpot instance.</param>
         /// <returns>True if the full spot signature is valid; otherwise, false.</returns>
-        public static bool VerifyFullSpot(DbSpot spot)
+        public static bool VerifyFullSpot(ParsedHeader spot)
         {
             if (string.IsNullOrEmpty(spot.UserSignature) || spot.UserKey == null)
                 return false;

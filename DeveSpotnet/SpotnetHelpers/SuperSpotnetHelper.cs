@@ -1,4 +1,5 @@
-﻿using SpotnetClient.SpotnetHelpers;
+﻿using DeveSpotnet.Models;
+using SpotnetClient.SpotnetHelpers;
 
 namespace DeveSpotnet.SpotnetHelpers
 {
@@ -20,9 +21,9 @@ namespace DeveSpotnet.SpotnetHelpers
         /// <param name="date">A date string (to be parsed)</param>
         /// <param name="messageId">Message identifier</param>
         /// <param name="rsaKeys">A dictionary of RSA keys indexed by keyid</param>
-        public static DbSpot ParseHeader(string subj, string from, string date, string messageId)
+        public static ParsedHeader ParseHeader(string subj, string from, string date, string messageId)
         {
-            var spot = new DbSpot();
+            var spot = new ParsedHeader();
 
             // --- Extract and process the "From" header ---
             int fromInfoPos = from.IndexOf('<');
@@ -46,7 +47,7 @@ namespace DeveSpotnet.SpotnetHelpers
 
             spot.Verified = false;
             spot.FileSize = 0;
-            spot.MessageId = messageId;
+            spot.MessageId = messageId.TrimStart('<').TrimEnd('>');
 
             if (DateTime.TryParse(date, out DateTime parsedDate))
                 spot.Stamp = parsedDate;
