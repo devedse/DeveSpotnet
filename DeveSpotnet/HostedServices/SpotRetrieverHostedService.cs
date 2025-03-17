@@ -202,6 +202,7 @@ namespace DeveSpotnet.HostedServices
             // Save the new headers to the database.
             dbContext.SpotHeaders.AddRange(headersToAdd);
 
+            var testje = headersToAdd.Where(t => t.ParsedHeader_Stamp != null).OrderBy(t => t.ParsedHeader_Stamp).ToList();
             var lastProccessedTimeStampString = headersToAdd.Any() ? headersToAdd.Max(h => h.ParsedHeader_Stamp).ToString() : "N/A";
 
             await dbContext.SaveChangesAsync(token);

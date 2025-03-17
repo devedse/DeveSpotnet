@@ -49,10 +49,15 @@ namespace DeveSpotnet.SpotnetHelpers
             spot.FileSize = 0;
             spot.MessageId = messageId.TrimStart('<').TrimEnd('>');
 
-            if (DateTime.TryParse(date, out DateTime parsedDate))
-                spot.Stamp = parsedDate;
+
+            if (PHPDateParser.TryParseNntpDate(date, out DateTimeOffset parsedDate))
+            {
+                spot.Stamp = parsedDate.LocalDateTime;
+            }
             else
-                spot.Stamp = DateTime.Now;
+            {
+                spot.Stamp = default(DateTime);
+            }
 
             // --- Split the header into fields ---
             string[] fields = spot.Header.Split('.');
