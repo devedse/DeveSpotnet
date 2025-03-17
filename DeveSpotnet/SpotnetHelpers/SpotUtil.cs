@@ -86,7 +86,7 @@ namespace DeveSpotnet.SpotnetHelpers
                 throw new ArgumentException("User key cannot be null or empty.", nameof(userKey));
 
             // Decode the Base64-encoded user key.
-            byte[] decoded = Convert.FromBase64String(userKey);
+            byte[] decoded = PHPBase64.FromBase64String(userKey);
             uint crc = Crc32.Compute(decoded);
 
             // Construct a 4-byte array from the CRC32 (little-endian).

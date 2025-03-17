@@ -27,12 +27,12 @@ namespace DeveSpotnet.SpotnetHelpers
                 {
                     RSAParameters parameters = new RSAParameters
                     {
-                        Modulus = Convert.FromBase64String(rsaKey.Modulo),
-                        Exponent = Convert.FromBase64String(rsaKey.Exponent)
+                        Modulus = PHPBase64.FromBase64String(rsaKey.Modulo),
+                        Exponent = PHPBase64.FromBase64String(rsaKey.Exponent)
                     };
                     rsa.ImportParameters(parameters);
                     byte[] dataBytes = Encoding.UTF8.GetBytes(toCheck);
-                    byte[] signatureBytes = Convert.FromBase64String(signature);
+                    byte[] signatureBytes = PHPBase64.FromBase64String(signature);
                     return rsa.VerifyData(dataBytes, signatureBytes, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
                 }
             }
