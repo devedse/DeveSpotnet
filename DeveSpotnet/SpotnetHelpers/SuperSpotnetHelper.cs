@@ -64,11 +64,26 @@ namespace DeveSpotnet.SpotnetHelpers
                 return null;
 
             // Category is the first digit (minus one per PHP logic).
-            spot.Category = int.Parse(fields[0].Substring(0, 1)) - 1;
+            if (!int.TryParse(fields[0].Substring(0, 1), out var category))
+            {
+                return null;
+            }
+            spot.Category = category - 1;
+
             // KeyId is the second digit.
-            spot.KeyId = int.Parse(fields[0].Substring(1, 1));
+            if (!int.TryParse(fields[0].Substring(1, 1), out var keyId))
+            {
+                return null;
+            }
+            spot.KeyId = keyId;
+
             // FileSize is from the second field.
-            spot.FileSize = int.Parse(fields[1]);
+            if (!int.TryParse(fields[1], out var fileSize))
+            {
+                return null;
+            }
+            spot.FileSize = fileSize;
+
 
             // Initialize subcategory fields.
             spot.SubCatA = "";

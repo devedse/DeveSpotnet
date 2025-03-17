@@ -1,6 +1,8 @@
 ﻿using DeveSpotnet.Configuration;
 using DeveSpotnet.Db;
 using DeveSpotnet.Db.DbModels;
+using DeveSpotnet.Models;
+using DeveSpotnet.SpotnetHelpers;
 using mcnntp.common.client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -140,8 +142,22 @@ namespace DeveSpotnet.HostedServices
 
             // Map NNTP headers to database entities.
             var headersToAdd = new List<DbSpotHeader>();
+            int countValid = 0;
             foreach (var header in xoverResponse)
             {
+                ParsedHeader? parsedHeader = null;
+                try
+                {
+                    parsedHeader = SuperSpotnetHelper.ParseHeader(header.Subject, header.From, header.Date, header.MessageID);
+                    if (parsedHeader != null)
+                    {
+                        countValid++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Error parsing header for article {ArticleNumber}", header.ArticleNumber);
+                }
                 var dbHeader = new DbSpotHeader
                 {
                     ArticleNumber = header.ArticleNumber,
@@ -153,15 +169,47 @@ namespace DeveSpotnet.HostedServices
                     Bytes = header.Bytes,
                     Lines = header.Lines,
                     Code = header.Code,
-                    Message = header.Message
+                    Message = header.Message,
+
+                    ParsedHeader_Valid = parsedHeader != null,
+                    ParsedHeader_Header = parsedHeader?.Header,
+                    ParsedHeader_SelfSignedPubKey = parsedHeader?.SelfSignedPubKey,
+                    ParsedHeader_UserSignature = parsedHeader?.UserSignature,
+                    ParsedHeader_Verified = parsedHeader?.Verified,
+                    ParsedHeader_FileSize = parsedHeader?.FileSize,
+                    ParsedHeader_MessageId = parsedHeader?.MessageId,
+                    ParsedHeader_Stamp = parsedHeader?.Stamp,
+                    ParsedHeader_Poster = parsedHeader?.Poster,
+                    ParsedHeader_Category = parsedHeader?.Category,
+                    ParsedHeader_KeyId = parsedHeader?.KeyId,
+                    ParsedHeader_SubCatA = parsedHeader?.SubCatA,
+                    ParsedHeader_SubCatB = parsedHeader?.SubCatB,
+                    ParsedHeader_SubCatC = parsedHeader?.SubCatC,
+                    ParsedHeader_SubCatD = parsedHeader?.SubCatD,
+                    ParsedHeader_SubCatZ = parsedHeader?.SubCatZ,
+                    ParsedHeader_WasSigned = parsedHeader?.WasSigned,
+                    ParsedHeader_SpotterId = parsedHeader?.SpotterId,
+                    ParsedHeader_Title = parsedHeader?.Title,
+                    ParsedHeader_Tag = parsedHeader?.Tag,
+                    ParsedHeader_HeaderSign = parsedHeader?.HeaderSign,
+                    ParsedHeader_UserKey_Modulo = parsedHeader?.UserKey?.Modulo,
+                    ParsedHeader_UserKey_Exponent = parsedHeader?.UserKey?.Exponent,
+                    ParsedHeader_XmlSignature = parsedHeader?.XmlSignature
                 };
                 headersToAdd.Add(dbHeader);
             }
 
             // Save the new headers to the database.
             dbContext.SpotHeaders.AddRange(headersToAdd);
+
+            var lastProccessedTimeStampString = headersToAdd.Any() ? headersToAdd.Max(h => h.ParsedHeader_Stamp).ToString() : "N/A";
+
             await dbContext.SaveChangesAsync(token);
-            _logger.LogInformation("Saved {Count} headers to the database.", headersToAdd.Count);
+            _logger.LogInformation("Saved {Count} headers to the database. {Valid} headers were successfully parsed, {Invalid} where invalid. Last processed TimeStamp: {LastTimeStamp}",
+                headersToAdd.Count, 
+                countValid, 
+                headersToAdd.Count - countValid,
+                lastProccessedTimeStampString);
 
             return headersToAdd.Count;
         }
