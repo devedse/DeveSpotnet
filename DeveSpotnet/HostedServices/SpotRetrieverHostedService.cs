@@ -124,7 +124,11 @@ namespace DeveSpotnet.HostedServices
 
             // Determine the end article for this batch.
             int endArticle = Math.Min(startArticle + BatchSize - 1, groupHigh);
-            _logger.LogInformation("Retrieving articles from {StartArticle} to {EndArticle}", startArticle, endArticle);
+
+            // Calculate remaining items in the group and log that info while obtaining headers.
+            int remainingItems = groupHigh - endArticle;
+            _logger.LogInformation("Retrieving articles from {StartArticle} to {EndArticle}. {Remaining} more items remain to be processed.",
+                startArticle, endArticle, remainingItems);
 
             // Retrieve headers for the given range.
             var xoverResponse = await client.XOverAsync(startArticle, endArticle);
@@ -158,7 +162,9 @@ namespace DeveSpotnet.HostedServices
             dbContext.SpotHeaders.AddRange(headersToAdd);
             await dbContext.SaveChangesAsync(token);
             _logger.LogInformation("Saved {Count} headers to the database.", headersToAdd.Count);
+
             return headersToAdd.Count;
         }
+
     }
 }
