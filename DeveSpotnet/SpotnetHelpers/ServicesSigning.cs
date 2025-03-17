@@ -60,7 +60,9 @@ namespace DeveSpotnet.SpotnetHelpers
             string toCheck = spot.Title + headerPart + spot.Poster;
 
             if (!rsaKeys.ContainsKey(spot.KeyId))
+            {
                 return false;
+            }
 
             RsaKey key = rsaKeys[spot.KeyId];
             return CheckRsaSignature(toCheck, signature, key, true);

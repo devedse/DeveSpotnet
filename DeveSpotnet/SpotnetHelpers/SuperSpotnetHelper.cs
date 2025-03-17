@@ -223,7 +223,9 @@ namespace DeveSpotnet.SpotnetHelpers
                                     { 7, new RsaKey { Modulo = spot.SelfSignedPubKey, Exponent = "AQAB" } }
                                 };
                                 if (ServicesSigning.VerifySpotHeader(spot, signature, userRsaKey))
+                                {
                                     spot.SpotterId = SpotUtil.CalculateSpotterId(spot.SelfSignedPubKey);
+                                }
                             }
                         }
                         break;
