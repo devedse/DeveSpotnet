@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace DeveSpotnet.SpotnetHelpers
 {
-    public static class PHPDateParser
+    public static partial class PHPDateParser
     {
         private static readonly Dictionary<string, string> TzMap = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -41,8 +41,21 @@ namespace DeveSpotnet.SpotnetHelpers
             { "AWST", "+0800" }
         };
 
+        // Build the time zone mapping pattern from the keys.
         private static readonly string TzMapPattern = @"\b(" + string.Join("|", TzMap.Keys) + @")\b";
 
+        // Precompiled Regex to check for a numeric offset (e.g. "+0000" or "+00:00").
+        [GeneratedRegex(@"[\+\-]\d{2}:?\d{2}")]
+        private static partial Regex NumericOffsetRegex_Generated();
+
+        // Precompiled Regex to remove any trailing parenthesized zone text (e.g. " (PDT)").
+        [GeneratedRegex(@"\s*\([A-Za-z]+\)$")]
+        private static partial Regex TrailingParenthesesRegex_Generated();
+
+        // Precompiled Regex for matching any known time zone abbreviations.
+        private static readonly Regex TzMapRegex = new Regex(TzMapPattern, RegexOptions.Compiled);
+
+        // Array of parseable date formats.
         private static readonly string[] ParsableFormats =
         [
             "dd MMM yy HH:mm zzz",             // e.g. "20 Jul 16 10:47 +0200"
@@ -67,7 +80,7 @@ namespace DeveSpotnet.SpotnetHelpers
         /// <returns>True if parsing succeeded; otherwise false.</returns>
         public static bool TryParseNntpDate(string dateString, out DateTimeOffset dateTime)
         {
-            var dateStringProcessing = dateString;
+            string dateStringProcessing = dateString;
 
             if (string.IsNullOrWhiteSpace(dateStringProcessing))
             {
@@ -76,14 +89,14 @@ namespace DeveSpotnet.SpotnetHelpers
             }
 
             // 1. If a numeric offset (e.g. "+0000" or "+00:00") exists, remove any trailing parenthesized zone text.
-            if (Regex.IsMatch(dateStringProcessing, @"[\+\-]\d{2}:?\d{2}"))
+            if (NumericOffsetRegex_Generated().IsMatch(dateStringProcessing))
             {
-                dateStringProcessing = Regex.Replace(dateStringProcessing, @"\s*\([A-Za-z]+\)$", "").Trim();
+                dateStringProcessing = TrailingParenthesesRegex_Generated().Replace(dateStringProcessing, "").Trim();
             }
             else
             {
-                // Replace any occurrence with its numeric offset.
-                dateStringProcessing = Regex.Replace(dateStringProcessing, TzMapPattern, m =>
+                // 2. Replace known time zone abbreviations with their numeric offsets.
+                dateStringProcessing = TzMapRegex.Replace(dateStringProcessing, m =>
                 {
                     if (TzMap.TryGetValue(m.Value, out string offset))
                     {
@@ -93,13 +106,13 @@ namespace DeveSpotnet.SpotnetHelpers
                 });
             }
 
-            // 2. First, try the built-in parsing.
+            // 3. First, try the built-in parsing.
             if (DateTimeOffset.TryParse(dateStringProcessing, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out dateTime))
             {
                 return true;
             }
 
-            // 3. Try parsing using each explicit format.
+            // 4. Try parsing using each explicit format.
             foreach (var format in ParsableFormats)
             {
                 if (DateTimeOffset.TryParseExact(dateStringProcessing, format, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out dateTime))
