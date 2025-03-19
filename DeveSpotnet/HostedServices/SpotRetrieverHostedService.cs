@@ -53,7 +53,6 @@ namespace DeveSpotnet.HostedServices
 
                         // No new headers were found, wait before checking again.
                         await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
-                        break;
                     }
                 }
             }
