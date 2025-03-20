@@ -1,4 +1,5 @@
-﻿using DeveSpotnet.Controllers.NewzNabApiControllerHelpers;
+﻿using DeveSpotnet.Configuration;
+using DeveSpotnet.Controllers.NewzNabApiControllerHelpers;
 using DeveSpotnet.Controllers.NewzNabApiModels;
 using DeveSpotnet.Db;
 using DeveSpotnet.Db.DbModels;
@@ -22,6 +23,15 @@ namespace DeveSpotnet.Controllers
         {
             _usenetService = usenetService;
             _dbContext = dbContext;
+        }
+
+
+        private string GetBaseUrl(HttpContext httpContext)
+        {
+            var request = httpContext.Request;
+            var scheme = request.Scheme;
+            var host = request.Host.Value;
+            return $"{scheme}://{host}";
         }
 
         [HttpGet]
@@ -86,74 +96,19 @@ namespace DeveSpotnet.Controllers
             // Ensure the apikey is provided; otherwise, return 401 Unauthorized.
             if (string.IsNullOrWhiteSpace(apikey))
             {
-                return Unauthorized("Missing required parameter 'apikey'.");
+                //return Unauthorized("Missing required parameter 'apikey'.");
             }
 
-            // In a real implementation, you would perform the TV search using the parameters.
-            // For demonstration, we return a static TV search response using new C# 12 collection initializer syntax.
-            var response = new TvSearchResponse
-            {
-                Rss = new TvSearchRss
-                {
-                    Version = "2.0",
-                    XmlnsAtom = "http://www.w3.org/2005/Atom",
-                    Channel = new TvSearchChannel
-                    {
-                        Title = "example.com",
-                        Description = "example.com API results",
-                        NewznabResponse = new NewznabResponse { Offset = offset, Total = 1234 },
-                        Items = [
-                            new TvSearchItem
-                            {
-                                Title = "A.Public.Domain.Tv.Show.S06E05",
-                                Guid = "http://servername.com/rss/viewnzb/e9c515e02346086e3a477a5436d7bc8c",
-                                Link = "http://servername.com/rss/nzb/e9c515e02346086e3a477a5436d7bc8c&i=1&r=18cf9f0a736041465e3bd521d00a90b9",
-                                Comments = "http://servername.com/rss/viewnzb/e9c515e02346086e3a477a5436d7bc8c#comments",
-                                PubDate = DateTime.UtcNow.ToString("r"),
-                                Category = "TV > XviD",
-                                Description = "Some TV show",
-                                Enclosure = new Enclosure
-                                {
-                                    Url = "http://servername.com/rss/nzb/e9c515e02346086e3a477a5436d7bc8c&i=1&r=18cf9f0a736041465e3bd521d00a90b9",
-                                    Length = 154653309,
-                                    Type = "application/x-nzb"
-                                },
-                                Attributes = [
-                                    new NewznabAttr { Name = "category", Value = "5030" },
-                                    new NewznabAttr { Name = "size", Value = "154653309" },
-                                    new NewznabAttr { Name = "season", Value = "3" },
-                                    new NewznabAttr { Name = "episode", Value = "2" }
-                                ]
-                            },
-                            new TvSearchItem
-                            {
-                                Title = "A.Public.Domain.Tv.Show.S06E05",
-                                Guid = "http://servername.com/rss/viewnzb/e9c515e02346086e3a477a5436d7bc8c",
-                                Link = "http://servername.com/rss/nzb/e9c515e02346086e3a477a5436d7bc8c&i=1&r=18cf9f0a736041465e3bd521d00a90b9",
-                                Comments = "http://servername.com/rss/viewnzb/e9c515e02346086e3a477a5436d7bc8c#comments",
-                                PubDate = DateTime.UtcNow.ToString("r"),
-                                Category = "TV > XviD",
-                                Description = "Some TV show",
-                                Enclosure = new Enclosure
-                                {
-                                    Url = "http://servername.com/rss/nzb/e9c515e02346086e3a477a5436d7bc8c&i=1&r=18cf9f0a736041465e3bd521d00a90b9",
-                                    Length = 4294967295,
-                                    Type = "application/x-nzb"
-                                },
-                                Attributes = [
-                                    new NewznabAttr { Name = "category", Value = "5000" },
-                                    new NewznabAttr { Name = "category", Value = "5030" },
-                                    new NewznabAttr { Name = "size", Value = "4294967295" },
-                                    new NewznabAttr { Name = "season", Value = "3" },
-                                    new NewznabAttr { Name = "episode", Value = "1" }
-                                ]
-                            }
-                        ]
-                    }
-                }
-            };
+            var foundSpots = _dbContext.SpotHeaders.Where(t => t.ParsedHeader_Valid && t.ParsedHeader_Title != null && t.ParsedHeader_Title.Contains(q)).ToList();
 
-            return Ok(response);
+
+            var baseUrl = GetBaseUrl(HttpContext);
+
+            //SuperTodo: Load from config, but for now w/e
+            var deveSpotnetSettings = new DeveSpotnetSettings();
+            var blah = NewznabConverter2.ConvertToRss(deveSpotnetSettings, apikey, foundSpots, baseUrl, "supertodo@email.com", "supertodousername", extended, del, offset);
+
+            return Ok(blah);
         }
     }
 }
