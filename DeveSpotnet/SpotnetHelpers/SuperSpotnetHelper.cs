@@ -47,7 +47,7 @@ namespace DeveSpotnet.SpotnetHelpers
 
             spot.Verified = false;
             spot.FileSize = 0;
-            spot.MessageId = messageId.TrimStart('<').TrimEnd('>');
+            spot.MessageId = messageId;
 
 
             if (PHPDateParser.TryParseNntpDate(date, out DateTimeOffset parsedDate))

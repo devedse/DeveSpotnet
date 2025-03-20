@@ -2,7 +2,6 @@
 
 namespace DeveSpotnet.Controllers.NewzNabApiModels
 {
-    // Root element for XML response
     [XmlRoot("rss")]
     public class NewznabRssResponse
     {
@@ -17,7 +16,7 @@ namespace DeveSpotnet.Controllers.NewzNabApiModels
 
         public NewznabRssResponse()
         {
-            // Correct way to declare XML namespaces
+            // Properly register namespace prefixes.
             Xmlns.Add("atom", "http://www.w3.org/2005/Atom");
             Xmlns.Add("newznab", "http://www.newznab.com/DTD/2010/feeds/attributes/");
         }
@@ -25,7 +24,8 @@ namespace DeveSpotnet.Controllers.NewzNabApiModels
 
     public class NewznabChannel
     {
-        [XmlElement("atom:link")]
+        // Use the local element name "link" and set its namespace to the Atom namespace.
+        [XmlElement("link", Namespace = "http://www.w3.org/2005/Atom")]
         public AtomLink AtomLink { get; set; }
 
         [XmlElement("title")]
@@ -49,7 +49,8 @@ namespace DeveSpotnet.Controllers.NewzNabApiModels
         [XmlElement("image")]
         public RssImage Image { get; set; }
 
-        [XmlElement("newznab:response")]
+        // Remove the prefix from the element name and set the appropriate namespace.
+        [XmlElement("response", Namespace = "http://www.newznab.com/DTD/2010/feeds/attributes/")]
         public NewznabResponse Response { get; set; }
 
         [XmlElement("item")]
@@ -112,7 +113,8 @@ namespace DeveSpotnet.Controllers.NewzNabApiModels
         [XmlElement("enclosure")]
         public Enclosure Enclosure { get; set; }
 
-        [XmlElement("newznab:attr")]
+        // For Newznab attributes, remove the colon and specify the namespace.
+        [XmlElement("attr", Namespace = "http://www.newznab.com/DTD/2010/feeds/attributes/")]
         public List<NewznabAttribute> Attributes { get; set; } = new List<NewznabAttribute>();
 
         [XmlElement("new")]
@@ -153,22 +155,5 @@ namespace DeveSpotnet.Controllers.NewzNabApiModels
 
         [XmlAttribute("value")]
         public string Value { get; set; }
-    }
-
-    // Class for JSON response
-    public class NewznabJsonItem
-    {
-        public string ID { get; set; }
-        public string Name { get; set; }
-        public long Size { get; set; }
-        public string AddDate { get; set; }
-        public string Guid { get; set; }
-        public string FromName { get; set; }
-        public int Completion { get; set; } = 100;
-        public string CategoryID { get; set; }
-        public int Comments { get; set; }
-        public string CategoryName { get; set; }
-        public string CategoryIds { get; set; }
-        public int? TotalRows { get; set; }
     }
 }

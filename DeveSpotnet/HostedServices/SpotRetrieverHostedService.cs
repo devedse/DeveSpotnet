@@ -145,9 +145,10 @@ namespace DeveSpotnet.HostedServices
             foreach (var header in xoverResponse)
             {
                 ParsedHeader? parsedHeader = null;
+                var trimmedMessageId = header.MessageID?.TrimStart('<').TrimEnd('>');
                 try
                 {
-                    parsedHeader = SuperSpotnetHelper.ParseHeader(header.Subject, header.From, header.Date, header.MessageID);
+                    parsedHeader = SuperSpotnetHelper.ParseHeader(header.Subject, header.From, header.Date, trimmedMessageId);
                     if (parsedHeader != null)
                     {
                         countValid++;
@@ -163,7 +164,7 @@ namespace DeveSpotnet.HostedServices
                     Subject = header.Subject,
                     From = header.From,
                     Date = header.Date,
-                    MessageID = header.MessageID,
+                    MessageID = trimmedMessageId,
                     References = header.References,
                     Bytes = header.Bytes,
                     Lines = header.Lines,
@@ -206,8 +207,8 @@ namespace DeveSpotnet.HostedServices
 
             await dbContext.SaveChangesAsync(token);
             _logger.LogInformation("Saved {Count} headers to the database. {Valid} headers were successfully parsed, {Invalid} where invalid. Last processed TimeStamp: {LastTimeStamp}",
-                headersToAdd.Count, 
-                countValid, 
+                headersToAdd.Count,
+                countValid,
                 headersToAdd.Count - countValid,
                 lastProccessedTimeStampString);
 

@@ -59,6 +59,11 @@ namespace DeveSpotnet.Services
             bool includeDelParam,
             int offset)
         {
+            if (!spotwebUrl.EndsWith('/'))
+            {
+                spotwebUrl += '/';
+            }
+
             var rssResponse = new NewznabRssResponse
             {
                 Version = "2.0",
