@@ -1,9 +1,11 @@
 
 using DeveSpotnet.Configuration;
+using DeveSpotnet.Controllers.NewzNabApiControllerHelpers;
 using DeveSpotnet.Db;
 using DeveSpotnet.HostedServices;
 using DeveSpotnet.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DeveSpotnet
 {
@@ -27,7 +29,12 @@ namespace DeveSpotnet
             // Register the Usenet service as a singleton.
             builder.Services.AddSingleton<IUsenetService, UsenetService>();
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddXmlSerializerFormatters();
+
+            // Register the custom filter (o=json or o=xml => override the Accept header)
+            builder.Services.AddScoped<OverrideAcceptHeaderFilter>();
+
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
 
