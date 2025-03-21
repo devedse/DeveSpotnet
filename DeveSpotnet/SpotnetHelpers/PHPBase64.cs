@@ -1,4 +1,6 @@
-﻿namespace DeveSpotnet.SpotnetHelpers
+﻿using System.Text;
+
+namespace DeveSpotnet.SpotnetHelpers
 {
     public static class PHPBase64
     {

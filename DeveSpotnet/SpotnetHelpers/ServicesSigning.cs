@@ -1,5 +1,6 @@
 ﻿using DeveSpotnet.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -38,7 +39,34 @@ namespace DeveSpotnet.SpotnetHelpers
             }
             catch
             {
-                return false;
+                try
+                {
+
+                    var fromBase64Modulo = PHPBase64.FromBase64String(rsaKey.Modulo);
+
+                    BigInteger bigIntModulo = new BigInteger(fromBase64Modulo, true, false);
+
+                    var fromBase64Exponent = PHPBase64.FromBase64String(rsaKey.Exponent);
+                    BigInteger bigIntExp = new BigInteger(fromBase64Exponent, true, false);
+
+                    using (RSA rsa = RSA.Create())
+                    {
+                        RSAParameters parameters = new RSAParameters
+                        {
+                            Modulus = bigIntModulo.ToByteArray(),
+                            Exponent = bigIntExp.ToByteArray()
+                        };
+                        var blahahefawej = new BigInteger(parameters.Modulus);
+                        rsa.ImportParameters(parameters);
+                        byte[] dataBytes = Encoding.UTF8.GetBytes(toCheck);
+                        byte[] signatureBytes = PHPBase64.FromBase64String(signature);
+                        return rsa.VerifyData(dataBytes, signatureBytes, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
+                    }
+                }
+                catch
+                {
+                    return false;
+                }
             }
         }
 
