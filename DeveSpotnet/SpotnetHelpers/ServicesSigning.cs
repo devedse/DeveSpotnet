@@ -14,11 +14,12 @@ namespace DeveSpotnet.SpotnetHelpers
         public static void Write(string toCheck, string signature,
                                  RsaKey rsaKey, bool csharpResult)
         {
+            // The PHP line will echo:  C#: <true/false> PHP: <true/false>
             string php =
-                $"echo checkRsaSignature('{EscapeForPhp(toCheck)}','{signature}'," +
+                $"echo 'C#: {(csharpResult ? "true" : "false")} PHP: ' ." +
+                $"(checkRsaSignature('{EscapeForPhp(toCheck)}','{signature}'," +
                 $"['modulo'=>'{rsaKey.Modulo}','exponent'=>'{rsaKey.Exponent}'],true)" +
-                "?'true':'false';" +
-                $" // C#: {(csharpResult ? "true" : "false")}, Php (expect): {(csharpResult ? "true" : "false")}";
+                "?'true':'false').PHP_EOL;";
 
             File.AppendAllLines("php-verify.log", new[] { php });
         }
@@ -65,7 +66,7 @@ namespace DeveSpotnet.SpotnetHelpers
                 }
                 else
                 {
-                    PhpVerifyLogger.Write(toCheck, signature, rsaKey, ok);
+                    //PhpVerifyLogger.Write(toCheck, signature, rsaKey, ok);
                 }
                 // <<< NEW <<<
 
