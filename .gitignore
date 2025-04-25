@@ -402,3 +402,4 @@ FodyWeavers.xsd
 DeveSpotnet/*.db
 DeveSpotnet/*.db-shm
 DeveSpotnet/*.db-wal
+/DeveSpotnet/superlog.txt
