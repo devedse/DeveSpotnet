@@ -5,12 +5,88 @@ using System.Text;
 
 namespace DeveSpotnet.SpotnetHelpers
 {
+    internal static class PhpVerifyLogger
+    {
+        private static string EscapeForPhp(string s) =>
+            s.Replace("\\", "\\\\").Replace("'", "\\'");
+
+        /// <summary>Writes the PHP test-statement plus the C# outcome.</summary>
+        public static void Write(string toCheck, string signature,
+                                 RsaKey rsaKey, bool csharpResult)
+        {
+            string php =
+                $"echo checkRsaSignature('{EscapeForPhp(toCheck)}','{signature}'," +
+                $"['modulo'=>'{rsaKey.Modulo}','exponent'=>'{rsaKey.Exponent}'],true)" +
+                "?'true':'false';" +
+                $" // C#: {(csharpResult ? "true" : "false")}, Php (expect): {(csharpResult ? "true" : "false")}";
+
+            File.AppendAllLines("php-verify.log", new[] { php });
+        }
+    }
+
     /// <summary>
     /// Provides methods for RSA signature verification and related operations.
     /// Modeled after your PHP Services_Signing_Base code.
     /// </summary>
     public static class ServicesSigning
     {
+        // -----------------------------------------------------------------------------
+        // 2.  CHANGE YOUR CheckRsaSignature METHOD – only the marked part is new.
+        //    The helper is called *only* when the signature fails.
+        // -----------------------------------------------------------------------------
+        public static bool CheckRsaSignature(string toCheck, string signature,
+                                             RsaKey rsaKey, bool useCache)
+        {
+            var sb = new StringBuilder();
+            try
+            {
+                using RSA rsa = RSA.Create();
+
+                RSAParameters parameters = new()
+                {
+                    Modulus = PHPBase64.FromBase64String(rsaKey.Modulo),
+                    Exponent = PHPBase64.FromBase64String(rsaKey.Exponent)
+                };
+
+                sb.Append($"ModulusLength: {parameters.Modulus.Length}");
+                rsa.ImportParameters(parameters);
+
+                byte[] dataBytes = Encoding.UTF8.GetBytes(toCheck);
+                byte[] signatureBytes = PHPBase64.FromBase64String(signature);
+
+                bool ok = rsa.VerifyData(dataBytes, signatureBytes,
+                                         HashAlgorithmName.SHA1,
+                                         RSASignaturePadding.Pkcs1);
+
+                // >>> NEW >>>  dump a PHP one-liner if C# says the sig is NOT ok
+                if (!ok)
+                {
+                    PhpVerifyLogger.Write(toCheck, signature, rsaKey, ok);
+                }
+                else
+                {
+                    PhpVerifyLogger.Write(toCheck, signature, rsaKey, ok);
+                }
+                // <<< NEW <<<
+
+                return ok;
+            }
+            catch (FormatException)
+            {
+                sb.AppendLine($" Exception: Format: {rsaKey.Modulo},{rsaKey.Exponent}");
+                return false;
+            }
+            catch (Exception e)
+            {
+                sb.AppendLine($" Exception: {e}");
+                return false;
+            }
+            finally
+            {
+                File.AppendAllLines("superlog.txt", new[] { sb.ToString().Trim() });
+            }
+        }
+
         /// <summary>
         /// Checks the RSA signature on the provided data.
         /// </summary>
@@ -19,8 +95,9 @@ namespace DeveSpotnet.SpotnetHelpers
         /// <param name="rsaKey">RSA key (with Base64-encoded Modulo and Exponent).</param>
         /// <param name="useCache">Not used in this implementation.</param>
         /// <returns>True if the signature is valid; otherwise, false.</returns>
-        public static bool CheckRsaSignature(string toCheck, string signature, RsaKey rsaKey, bool useCache)
+        public static bool CheckRsaSignatureOld(string toCheck, string signature, RsaKey rsaKey, bool useCache)
         {
+            var sb = new StringBuilder();
             try
             {
                 using (RSA rsa = RSA.Create())
@@ -30,16 +107,30 @@ namespace DeveSpotnet.SpotnetHelpers
                         Modulus = PHPBase64.FromBase64String(rsaKey.Modulo),
                         Exponent = PHPBase64.FromBase64String(rsaKey.Exponent)
                     };
+
+                    sb.Append($"ModulusLength: {parameters.Modulus.Length}");
+
                     rsa.ImportParameters(parameters);
                     byte[] dataBytes = Encoding.UTF8.GetBytes(toCheck);
                     byte[] signatureBytes = PHPBase64.FromBase64String(signature);
                     return rsa.VerifyData(dataBytes, signatureBytes, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
                 }
             }
-            catch
+            catch (FormatException e)
             {
+                sb.AppendLine($" Exception: Format: {rsaKey.Modulo},{rsaKey.Exponent}");
                 return false;
             }
+            catch (Exception e)
+            {
+                sb.AppendLine($" Exception: {e}");
+                return false;
+            }
+            finally
+            {
+                File.AppendAllLines("superlog.txt", [sb.ToString().Trim()]);
+            }
+
         }
 
         /// <summary>
