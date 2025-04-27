@@ -67,8 +67,14 @@ namespace DeveSpotnet.SpotnetHelpers.Parsers
 
             /* 3 – try to load XML (suppress errors like PHP’s @ operator)       */
             XDocument? top;
-            try { top = XDocument.Parse(xmlStr, LoadOptions.PreserveWhitespace); }
-            catch { top = null; }
+            try
+            {
+                top = XDocument.Parse(xmlStr, LoadOptions.PreserveWhitespace);
+            }
+            catch
+            {
+                top = null;
+            }
             if (top?.Root is null || top.Root.Name != "Spotnet") return spot;
 
             XElement posting = top.Root.Element("Posting") ?? new XElement("Posting");
@@ -76,7 +82,12 @@ namespace DeveSpotnet.SpotnetHelpers.Parsers
             /* 4 – straightforward scalar fields                                */
             spot.Created = (string)posting.Element("Created") ?? string.Empty;
             spot.Key = (int?)posting.Element("Key") ?? 0;
-            spot.Category = (int?)posting.Element("Category") ?? 0;
+
+            string category = posting.Element("Category")?.Nodes()?.OfType<XText>()?.FirstOrDefault()?.Value ?? string.Empty;
+            if (int.TryParse(category, out int cat))
+            {
+                spot.Category = cat;
+            }
             spot.Website = (string)posting.Element("Website") ?? string.Empty;
             spot.Description = (string)posting.Element("Description") ?? string.Empty;
             spot.FileSize = (long?)posting.Element("Size") ?? 0;
@@ -129,7 +140,10 @@ namespace DeveSpotnet.SpotnetHelpers.Parsers
             spot.Newsreader = (string)top.Root.Element("Extra")?.Element("Newsreader") ?? string.Empty;
 
             /* 9 – Category offset for new keys                                 */
-            if (spot.Key != 1) spot.Category--;
+            if (spot.Key != 1)
+            {
+                spot.Category--;
+            }
 
             /* 10 – SubCats                                                     */
             var subCatStrings = posting.Element("Category")?
