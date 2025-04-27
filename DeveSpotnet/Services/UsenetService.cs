@@ -1,27 +1,28 @@
 ﻿using DeveSpotnet.Configuration;
 using DeveSpotnet.Models;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System.Text.RegularExpressions;
-using System.Text;
 using DeveSpotnet.SpotnetHelpers;
-using System.Reflection.PortableExecutable;
-using mcnntp.common.client;
-using mcnntp.common;
 using DeveSpotnet.SpotnetHelpers.Parsers;
+using mcnntp.common.client;
+using Microsoft.Extensions.Options;
+using System.IO.Compression;
+using System.Text;
 
 namespace DeveSpotnet.Services
 {
-    public class UsenetService : IUsenetService
+    public class UsenetService : IUsenetService, IAsyncDisposable
     {
         private static readonly object _lockObject = new object();
         private readonly UsenetSettings _settings;
         private readonly ILogger<UsenetService> _logger;
 
+        private NntpClient _nntpClient;
+
         public UsenetService(IOptions<UsenetSettings> options, ILogger<UsenetService> logger)
         {
             _settings = options.Value;
             _logger = logger;
+
+            _nntpClient = ConnectClientAsync(CancellationToken.None).Result ?? throw new InvalidOperationException("Could not start NntpClient, see errors for more details");
         }
 
         /// <summary>
@@ -52,44 +53,106 @@ namespace DeveSpotnet.Services
             return client;
         }
 
-        public async Task<object> ReadFullSpot(string messageId)
+        public async Task<ParsedFullSpot?> ReadFullSpot(string messageId)
         {
-            NntpClient? client = null;
-            try
+            var header = await _nntpClient.HeadAsync($"<{messageId}>");
+
+            var fullHeader = FullHeaderParser.ParseFullHeader(header.Lines);
+
+            //var xoverThing = await client.XOverAsync(header.a, header.ArticleNumber);
+            var verified = ServicesSigning.VerifyFullSpot(new ParsedHeader()
             {
-                client = await ConnectClientAsync(CancellationToken.None);
-
-                var header = await client.HeadAsync($"<{messageId}>");
-
-                var fullHeader = FullHeaderParser.ParseFullHeader(header.Lines);
-
-                //var xoverThing = await client.XOverAsync(header.a, header.ArticleNumber);
-                var verified = ServicesSigning.VerifyFullSpot(new ParsedHeader()
-                {
-                    UserSignature = fullHeader.UserSignature,
-                    UserKey = fullHeader.UserKey,
-                    MessageId = messageId,
-                    XmlSignature = fullHeader.XmlSignature,
-                });
+                UserSignature = fullHeader.UserSignature,
+                UserKey = fullHeader.UserKey,
+                MessageId = messageId,
+                XmlSignature = fullHeader.XmlSignature,
+            });
 
 
-                if (verified)
-                {
-                    var spotterId = SpotUtil.CalculateSpotterId(fullHeader.UserKey.Modulo);
-                }
-
-                var fullParsedSpot = FullSpotParser.ParseFull(fullHeader.FullXml);
-                //var parsedHeader = SuperSpotnetHelper.ParseHeader(header.Subject, header.From, header.Date, trimmedMessageId);
-            }
-            finally
+            if (verified)
             {
-                if (client != null)
-                {
-                    await client.DisconnectAsync();
-                }
+                var spotterId = SpotUtil.CalculateSpotterId(fullHeader.UserKey.Modulo);
             }
-            return null;
+
+            var fullParsedSpot = FullSpotParser.ParseFull(fullHeader.FullXml);
+
+            return fullParsedSpot;
         }
+
+        /// <summary>
+        /// Returns the NZB file for a fully-parsed spot.
+        /// (No caching yet – plug in your favourite cache later.)
+        /// </summary>
+        public async Task<string> FetchNzbAsync(ParsedFullSpot spot,
+                                               CancellationToken ct = default)
+        {
+            if (spot.NzbSegments is null || spot.NzbSegments.Count == 0)
+            {
+                _logger.LogWarning("Spot {Id} has no NZB segments", spot.MessageId);
+                return string.Empty;
+            }
+
+            // SpotWeb always stores NZB blocks compressed.
+            string nzbXml = await ReadBinaryAsync(spot.NzbSegments, compressed: true, ct);
+
+            // Fallback if the file is empty / corrupt – identical to SpotWeb.
+            if (string.IsNullOrWhiteSpace(nzbXml))
+            {
+                nzbXml = "<xml><error>Invalid NZB file, unable to retrieve correct NZB file</error></xml>";
+            }
+
+            return nzbXml;
+        }
+
+        /// <summary>
+        /// Retrieves and (optionally) decompresses a binary that is spread
+        /// across several NNTP segments, reproducing SpotWeb’s
+        /// <c>readBinary()</c> behaviour.
+        /// </summary>
+        /// <param name="segmentList">List of Message-IDs *without* “&lt;…&gt;”.</param>
+        /// <param name="compressed">True when the payload is DEFLATE-compressed.</param>
+        public async Task<string> ReadBinaryAsync(
+            IEnumerable<string> segmentList,
+            bool compressed,
+            CancellationToken ct = default)
+        {
+            var builder = new StringBuilder(8192);
+
+            foreach (string seg in segmentList)
+            {
+                var resp = await _nntpClient.BodyAsync($"<{seg}>", ct);
+                if (!resp.IsSuccessfullyComplete)
+                {
+                    _logger.LogWarning("BODY failed for {Segment}", seg);
+                    continue;                       // skip broken segments
+                }
+
+                foreach (string line in resp.Lines)
+                    builder.Append(line);
+            }
+
+            /* 1 – undo the “special zip” escaping                              */
+            string unescaped = SpotUtil.UnspecialZipStr(builder.ToString());
+
+            /* 2 – optionally inflate                                           */
+            if (!compressed)
+                return unescaped;
+
+            byte[] deflateBytes = Encoding.Latin1.GetBytes(unescaped);
+
+            var decompressedString = await CompressionHelper.TryInflateAsync(deflateBytes, _logger, default);
+
+            if (!string.IsNullOrWhiteSpace(decompressedString))
+            {
+                return decompressedString;
+            }
+            else
+            {
+                _logger.LogWarning("Deflate decompression failed; returning raw payload");
+                return unescaped;
+            }
+        }
+
 
         public async Task<List<SpotPost>> RetrieveSpotPostsAsync()
         {
@@ -232,5 +295,13 @@ namespace DeveSpotnet.Services
             return spotPosts;
         }
 
+        public async ValueTask DisposeAsync()
+        {
+            if (_nntpClient != null)
+            {
+                await _nntpClient.DisconnectAsync();
+                _nntpClient = null;
+            }
+        }
     }
 }

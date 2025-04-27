@@ -154,13 +154,17 @@ namespace DeveSpotnet.Controllers
             if (string.IsNullOrWhiteSpace(messageid))
                 return BadRequest("Missing required parameter 'messageid'.");
 
-            var nzbStream = await _usenetService.ReadFullSpot(messageid);
-            if (nzbStream is null)
+            var fullSpot = await _usenetService.ReadFullSpot(messageid);
+            if (fullSpot is null)
+                return NotFound($"No spot found for message-id '{messageid}'.");
+
+            var nzb = await _usenetService.FetchNzbAsync(fullSpot);
+
+            if (string.IsNullOrWhiteSpace(nzb))
                 return NotFound($"No NZB found for message-id '{messageid}'.");
 
-            var fileName = $"{Uri.EscapeDataString(messageid)}.nzb";
-            //return File(nzbStream, "application/x-nzb", fileName);
-            return NotFound();
+            // Return the NZB content
+            return File(System.Text.Encoding.UTF8.GetBytes(nzb), "application/x-nzb");
         }
     }
 }
