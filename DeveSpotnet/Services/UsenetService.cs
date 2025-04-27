@@ -8,6 +8,7 @@ using DeveSpotnet.SpotnetHelpers;
 using System.Reflection.PortableExecutable;
 using mcnntp.common.client;
 using mcnntp.common;
+using DeveSpotnet.SpotnetHelpers.Parsers;
 
 namespace DeveSpotnet.Services
 {
@@ -21,6 +22,73 @@ namespace DeveSpotnet.Services
         {
             _settings = options.Value;
             _logger = logger;
+        }
+
+        /// <summary>
+        /// Connects to the NNTP server and authenticates.
+        /// </summary>
+        private async Task<NntpClient?> ConnectClientAsync(CancellationToken token)
+        {
+            var client = new NntpClient
+            {
+                Port = _settings.Port
+            };
+
+            var connectResult = await client.ConnectAsync(_settings.Host, _settings.Ssl);
+            if (!connectResult.IsSuccessfullyComplete)
+            {
+                _logger.LogError("Could not connect to the Usenet server at {Host}", _settings.Host);
+                return null;
+            }
+
+            var authResult = await client.AuthenticateUsernamePasswordAsync(_settings.Username, _settings.Password);
+            if (!authResult.IsSuccessfullyComplete)
+            {
+                _logger.LogError("Usenet authentication failed for user {Username}", _settings.Username);
+                return null;
+            }
+
+            _logger.LogInformation("Connected and authenticated to NNTP server {Host}", _settings.Host);
+            return client;
+        }
+
+        public async Task<object> ReadFullSpot(string messageId)
+        {
+            NntpClient? client = null;
+            try
+            {
+                client = await ConnectClientAsync(CancellationToken.None);
+
+                var header = await client.HeadAsync($"<{messageId}>");
+
+                var fullHeader = FullHeaderParser.ParseFullHeader(header.Lines);
+
+                //var xoverThing = await client.XOverAsync(header.a, header.ArticleNumber);
+                var verified = ServicesSigning.VerifyFullSpot(new ParsedHeader()
+                {
+                    UserSignature = fullHeader.UserSignature,
+                    UserKey = fullHeader.UserKey,
+                    MessageId = messageId,
+                    XmlSignature = fullHeader.XmlSignature,
+                });
+
+
+                if (verified)
+                {
+                    var spotterId = SpotUtil.CalculateSpotterId(fullHeader.UserKey.Modulo);
+                }
+
+                var fullParsedSpot = FullSpotParser.ParseFull(fullHeader.FullXml);
+                //var parsedHeader = SuperSpotnetHelper.ParseHeader(header.Subject, header.From, header.Date, trimmedMessageId);
+            }
+            finally
+            {
+                if (client != null)
+                {
+                    await client.DisconnectAsync();
+                }
+            }
+            return null;
         }
 
         public async Task<List<SpotPost>> RetrieveSpotPostsAsync()
@@ -67,7 +135,7 @@ namespace DeveSpotnet.Services
             var article2 = await client.ArticleAsync(messageId);
 
 
-            var parsedFrom = SuperSpotnetHelper.ParseHeader(roeroms06e05xover.Subject, roeroms06e05xover.From, roeroms06e05xover.Date, roeroms06e05xover.MessageID);
+            var parsedFrom = XoverHeaderParser.ParseHeader(roeroms06e05xover.Subject, roeroms06e05xover.From, roeroms06e05xover.Date, roeroms06e05xover.MessageID);
 
 
 

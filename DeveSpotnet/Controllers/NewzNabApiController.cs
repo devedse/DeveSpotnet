@@ -110,5 +110,57 @@ namespace DeveSpotnet.Controllers
 
             return Ok(blah);
         }
+
+        /// <summary>
+        /// Download an NZB (t=get / g=get).  
+        /// If the caller passes <code>del=1</code> the spot is removed from the caller’s
+        /// watch-list first – no permission checks are done, exactly like the PHP version
+        /// when you ignore <code>$this-&gt;_spotSec-&gt;allowed()</code>.
+        /// </summary>
+        [HttpGet]
+        [QueryParameterConstraint("t", "get")]              // newznab style:  ?g=get&id=<messageid>
+        [Produces("application/x-nzb")]
+        public async Task<IActionResult> GetNzb(
+            [FromQuery] string apikey,
+            [FromQuery(Name = "id")] string messageid,      // newznab’s “id”  == Spotnet “messageid”
+            [FromQuery] bool del = false)
+        {
+            if (string.IsNullOrWhiteSpace(messageid))
+                return BadRequest("Missing required parameter 'id' (messageid).");
+
+            // ──────────────────────────────────────────────────────────────────────
+            // 1. Optional: delete from the caller’s watch-list
+            // ──────────────────────────────────────────────────────────────────────
+            if (del)
+            {
+                //await RemoveFromWatchListAsync(messageid);
+            }
+
+
+
+            var baseUrl = GetBaseUrl(HttpContext);
+            var redirect = $"{baseUrl}api?page=getnzb&action=display&messageid={Uri.EscapeDataString(messageid)}";
+            return Redirect(redirect);
+        }
+
+        /***********************************************************************
+         * 2. Target: /?page=getnzb&action=display&messageid=<id>             *
+         **********************************************************************/
+        [HttpGet]
+        [QueryParameterConstraint("page", "getnzb")]
+        //[QueryParameterConstraint("action", "display")]
+        public async Task<IActionResult> DisplayNzb([FromQuery] string messageid)
+        {
+            if (string.IsNullOrWhiteSpace(messageid))
+                return BadRequest("Missing required parameter 'messageid'.");
+
+            var nzbStream = await _usenetService.ReadFullSpot(messageid);
+            if (nzbStream is null)
+                return NotFound($"No NZB found for message-id '{messageid}'.");
+
+            var fileName = $"{Uri.EscapeDataString(messageid)}.nzb";
+            //return File(nzbStream, "application/x-nzb", fileName);
+            return NotFound();
+        }
     }
 }

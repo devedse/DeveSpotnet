@@ -3,6 +3,7 @@ using DeveSpotnet.Db;
 using DeveSpotnet.Db.DbModels;
 using DeveSpotnet.Models;
 using DeveSpotnet.SpotnetHelpers;
+using DeveSpotnet.SpotnetHelpers.Parsers;
 using mcnntp.common.client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -12,7 +13,7 @@ namespace DeveSpotnet.HostedServices
     public class SpotRetrieverHostedService : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
-        private readonly IOptions<UsenetSettings> _settings;
+        private readonly UsenetSettings _settings;
         private readonly ILogger<SpotRetrieverHostedService> _logger;
         private const int BatchSize = 5000;
 
@@ -22,7 +23,7 @@ namespace DeveSpotnet.HostedServices
             ILogger<SpotRetrieverHostedService> logger)
         {
             _scopeFactory = scopeFactory;
-            _settings = settings;
+            _settings = settings.Value;
             _logger = logger;
         }
 
@@ -76,24 +77,24 @@ namespace DeveSpotnet.HostedServices
         {
             var client = new NntpClient
             {
-                Port = _settings.Value.Port
+                Port = _settings.Port
             };
 
-            var connectResult = await client.ConnectAsync(_settings.Value.Host, _settings.Value.Ssl);
+            var connectResult = await client.ConnectAsync(_settings.Host, _settings.Ssl);
             if (!connectResult.IsSuccessfullyComplete)
             {
-                _logger.LogError("Could not connect to the Usenet server at {Host}", _settings.Value.Host);
+                _logger.LogError("Could not connect to the Usenet server at {Host}", _settings.Host);
                 return null;
             }
 
-            var authResult = await client.AuthenticateUsernamePasswordAsync(_settings.Value.Username, _settings.Value.Password);
+            var authResult = await client.AuthenticateUsernamePasswordAsync(_settings.Username, _settings.Password);
             if (!authResult.IsSuccessfullyComplete)
             {
-                _logger.LogError("Usenet authentication failed for user {Username}", _settings.Value.Username);
+                _logger.LogError("Usenet authentication failed for user {Username}", _settings.Username);
                 return null;
             }
 
-            _logger.LogInformation("Connected and authenticated to NNTP server {Host}", _settings.Value.Host);
+            _logger.LogInformation("Connected and authenticated to NNTP server {Host}", _settings.Host);
             return client;
         }
 
@@ -148,7 +149,7 @@ namespace DeveSpotnet.HostedServices
                 var trimmedMessageId = header.MessageID?.TrimStart('<').TrimEnd('>');
                 try
                 {
-                    parsedHeader = SuperSpotnetHelper.ParseHeader(header.Subject, header.From, header.Date, trimmedMessageId);
+                    parsedHeader = XoverHeaderParser.ParseHeader(header.Subject, header.From, header.Date, trimmedMessageId);
                     if (parsedHeader != null)
                     {
                         countValid++;

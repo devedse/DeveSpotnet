@@ -1,9 +1,9 @@
 ﻿using DeveSpotnet.Models;
 using SpotnetClient.SpotnetHelpers;
 
-namespace DeveSpotnet.SpotnetHelpers
+namespace DeveSpotnet.SpotnetHelpers.Parsers
 {
-    public static class SuperSpotnetHelper
+    public static class XoverHeaderParser
     {
         public static Dictionary<int, RsaKey> RSAKeys = new Dictionary<int, RsaKey>
         {
@@ -273,15 +273,6 @@ namespace DeveSpotnet.SpotnetHelpers
             }
 
             return spot;
-        }
-    }
-
-    public class ParsingLegacy
-    {
-        public string OldEncodingParse(string input)
-        {
-            // Implement your legacy parsing here.
-            return input;
         }
     }
 }
